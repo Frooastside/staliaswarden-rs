@@ -14,12 +14,13 @@ export async function addAliasToStalwart(alias) {
   });
 
   api
-    .post(
-      '/aliases',
-      {
-        alias,
-        destinations: [config.forwardTo]
-      }
+    .patch(
+      `/principal/${config.forwardTo}`,
+      [{
+        "action": "addItem",
+        "field": "emails",
+        "value": alias
+      }]
     )
     .then(res => console.log(`Alias ${alias} added to Stalwart`))
     .catch(err => {
