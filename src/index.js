@@ -14,23 +14,46 @@ function auth(req, res, next) {
   next();
 }
 
-async function handleAliasCreation(req, res) {
-  try {
-    const { domain } = req.body || {};
-    const alias = generateAlias(domain);
-    await addAliasToStalwart(alias);
-    res.status(201).json({ alias });
-  } catch (err) {
-    console.error("Alias creation failed:", err);
-    res.status(500).json({ error: "Failed to create alias" });
-  }
+async function createAlias(domain) {
+  const alias = generateAlias(domain);
+  if (!alias) return null;
+  await addAliasToStalwart(alias);
+  return alias;
 }
 
-// Addy.io-compatible endpoint
-app.post('/api/v1/aliases', auth, handleAliasCreation);
+app.post(['/api/v1/aliases', '/api/alias/random/new'], auth, async (req, res) => {
+  const { domain } = req.body || {};
+  const alias = await createAlias(domain);
 
-// SimpleLogin-compatible endpoint
-app.post('/api/alias/random/new', auth, handleAliasCreation);
+  if (!alias) {
+    return res.status(500).json({ error: "Failed to create alias" });
+  }
+
+  // Addy.io-compatible endpoint
+  if (req.path === '/api/v1/aliases') {
+    return res.status(201).json({
+      data: {
+        id: Date.now(),
+        email: alias,
+        local_part: alias.split("@")[0],
+        domain: alias.split("@")[1],
+        description: null,
+        enabled: true
+      }
+    });
+  }
+  
+  // SimpleLogin-compatible endpoint
+  return res.status(201).json({
+    alias: {
+      id: Date.now(),
+      email: alias,
+      enabled: true,
+      creation_date: new Date().toISOString(),
+      note: null
+    }
+  });
+});
 
 app.listen(config.port, () => {
   console.log(`Alias service running on port ${config.port}`);
