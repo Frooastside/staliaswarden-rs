@@ -21,7 +21,7 @@ async function createAlias(domain) {
   return alias;
 }
 
-app.post(['/api/v1/aliases', '/api/alias/random/new'], auth, async (req, res) => {
+app.post('/api/v1/aliases', auth, async (req, res) => {
   const { domain } = req.body || {};
   const alias = await createAlias(domain);
 
@@ -29,28 +29,17 @@ app.post(['/api/v1/aliases', '/api/alias/random/new'], auth, async (req, res) =>
     return res.status(500).json({ error: "Failed to create alias" });
   }
 
-  // Addy.io-compatible endpoint
-  if (req.path === '/api/v1/aliases') {
-    return res.status(201).json({
-      data: {
-        id: Date.now(),
-        email: alias,
-        local_part: alias.split("@")[0],
-        domain: alias.split("@")[1],
-        description: null,
-        enabled: true
-      }
-    });
-  }
-  
-  // SimpleLogin-compatible endpoint
-  return res.status(201).json({
-    alias: {
-      id: Date.now(),
+  const now = Date.now();
+  const [localPart, domainPart] = alias.split("@");
+
+  res.status(201).json({
+    data: {
+      id: now,
       email: alias,
-      enabled: true,
-      creation_date: new Date().toISOString(),
-      note: null
+      local_part: localPart,
+      domain: domainPart,
+      description: null,
+      enabled: true
     }
   });
 });
