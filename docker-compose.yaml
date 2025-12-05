@@ -1,5 +1,5 @@
 services:
-  express-app:
+  staliaswarden-rs:
     build: .
     ports:
       - "3000:3000"

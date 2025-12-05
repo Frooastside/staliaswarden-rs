@@ -1,17 +1,17 @@
-FROM node:20-alpine
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+WORKDIR /app
 
-# Set working directory
-WORKDIR /usr/src/app
-
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm install --only=production
-
-# Copy app code
+FROM chef AS planner
 COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Expose port
-EXPOSE 3000
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN cargo build --release --bin staliaswarden-rs
 
-# Run app
-CMD ["npm", "start"]
+FROM debian:trixie-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/release/staliaswarden-rs /usr/local/staliaswarden-rs
+ENTRYPOINT ["/usr/local/bin/staliaswarden-rs"]
